@@ -18,19 +18,19 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "litert/c/litert_common.h"
+
 #ifdef __cplusplus
+#include <type_traits>
 extern "C" {
 #endif
 
 /**
  * @brief Header containing ABI version and size metadata.
- *
- * Must be the first member of any ABI-stable struct.
- * Size: 8 bytes. Padding: 0 bytes (on 64-bit systems).
+ * Must be the first member of any ABI-stable struct (offset 0).
  */
 typedef struct LiteRtAbiHeader {
   // The physical size of the parent structure (including this header).
-  // Supports struct sizes up to 64KB, which is safe for C API tables.
   uint16_t struct_size;
 
   // Bumped when introducing breaking changes or a completely new struct layout.
@@ -43,34 +43,69 @@ typedef struct LiteRtAbiHeader {
   uint16_t reserved;
 } LiteRtAbiHeader;
 
-/**
- * @brief Checks if the provider's ABI version is compatible with the consumer's
- * requirements.
- *
- * @param instance_ptr Pointer to the struct instance (e.g.,
- * LiteRtRuntimeContext).
- * @param req_major The major version required by the consumer.
- * @param req_minor The minimum minor version required by the consumer.
- */
-#define LITERT_ABI_IS_COMPATIBLE(instance_ptr, req_major, req_minor) \
-  ((instance_ptr)->abi_header.major_version == (req_major) &&        \
-   (instance_ptr)->abi_header.minor_version >= (req_minor))
+LITERT_ABI_STATIC_ASSERT(sizeof(LiteRtAbiHeader) == 8,
+                         "LiteRtAbiHeader size mismatch");
 
 /**
- * @brief Safely verifies that an API member is version-compatible, physically
- * present in memory, and implemented (non-null).
- *
- * @param instance_ptr Pointer to the ABI-versioned struct instance.
- * @param req_major The expected major version of the struct layout.
- * @param api_member The name of the function pointer / member to check.
+ * @brief Checks ABI version compatibility. Evaluates header exactly once.
  */
-#define LITERT_ABI_HAS_API(instance_ptr, req_major, api_member)              \
-  ((instance_ptr) != nullptr &&                                              \
-   (instance_ptr)->abi_header.major_version == (req_major) &&                \
-   (instance_ptr)->abi_header.struct_size >=                                 \
-       ((const char*)(&(instance_ptr)->api_member) +                         \
-        sizeof((instance_ptr)->api_member) - (const char*)(instance_ptr)) && \
-   (instance_ptr)->api_member != nullptr)
+static inline int LiteRtIsAbiCompatible(const LiteRtAbiHeader* header,
+                                        uint16_t req_major,
+                                        uint16_t req_minor) {
+  return header &&
+         header->major_version == req_major &&
+         header->minor_version >= req_minor;
+}
+
+/**
+ * @brief Checks if a struct member at member_end_offset is within bounds.
+ */
+static inline int LiteRtIsAbiMemberPresent(const LiteRtAbiHeader* header,
+                                           uint16_t req_major,
+                                           size_t member_end_offset) {
+  return header &&
+         header->major_version == req_major &&
+         header->struct_size >= member_end_offset;
+}
+
+#define LITERT_ABI_IS_COMPATIBLE(instance_ptr, req_major, req_minor) \
+  LiteRtIsAbiCompatible(                                             \
+      (const LiteRtAbiHeader*)(instance_ptr), (req_major), (req_minor))
+
+#if defined(__cplusplus)
+#define LITERT_ABI_OFFSET(ptr, member) \
+  offsetof(std::remove_pointer_t<decltype(ptr)>, member)
+#elif defined(__GNUC__) || defined(__clang__)
+#define LITERT_ABI_OFFSET(ptr, member) \
+  offsetof(__typeof__(*(ptr)), member)
+#else
+#define LITERT_ABI_OFFSET(ptr, member) \
+  offsetof(typeof(*(ptr)), member)
+#endif
+
+#define LITERT_ABI_HAS_MEMBER(instance_ptr, req_major, member)        \
+  LiteRtIsAbiMemberPresent(                                           \
+      (const LiteRtAbiHeader*)(instance_ptr), (req_major),            \
+      LITERT_ABI_OFFSET(instance_ptr, member) + sizeof((instance_ptr)->member))
+
+#if defined(__cplusplus)
+#define LITERT_ABI_HAS_API(instance_ptr, req_major, api_member)             \
+  ([&](auto* _litert_p) {                                                   \
+    return LITERT_ABI_HAS_MEMBER(_litert_p, req_major, api_member) &&       \
+           ((_litert_p)->api_member != NULL);                               \
+  })(instance_ptr)
+#elif defined(__GNUC__) || defined(__clang__)
+#define LITERT_ABI_HAS_API(instance_ptr, req_major, api_member) \
+  __extension__({                                               \
+    __typeof__(instance_ptr) _litert_p = (instance_ptr);       \
+    LITERT_ABI_HAS_MEMBER(_litert_p, req_major, api_member) &&  \
+        ((_litert_p)->api_member != NULL);                      \
+  })
+#else
+#define LITERT_ABI_HAS_API(instance_ptr, req_major, api_member) \
+  (LITERT_ABI_HAS_MEMBER(instance_ptr, req_major, api_member) && \
+   ((instance_ptr)->api_member != NULL))
+#endif
 
 #ifdef __cplusplus
 }

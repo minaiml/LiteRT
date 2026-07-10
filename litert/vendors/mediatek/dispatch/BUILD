@@ -93,7 +93,7 @@ sh_test(
     name = "mediatek_dispatch_so_symbol_test",
     srcs = ["//litert/test:litert_c_api_dependency_test.sh"],
     args = [
-        "LiteRtDispatchGetApi",
+        "LiteRtDispatchQueryInterface",
         "$(location :dispatch_api_so)",
     ],
     data = [

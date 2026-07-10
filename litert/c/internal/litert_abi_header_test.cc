@@ -121,4 +121,54 @@ TEST(LiteRtAbiHeaderTest, HasApiV2) {
   EXPECT_FALSE(LITERT_ABI_HAS_API(&instance_v1, /*req_major=*/2, func2));
 }
 
+struct DummyStructWithArray {
+  LiteRtAbiHeader abi_header;
+  int count;
+  int data[4];
+};
+
+TEST(LiteRtAbiHeaderTest, HasMemberArrayAndData) {
+  DummyStructWithArray instance;
+  instance.abi_header.struct_size = sizeof(DummyStructWithArray);
+  instance.abi_header.major_version = 1;
+  instance.abi_header.minor_version = 0;
+  instance.abi_header.reserved = 0;
+  instance.count = 0;
+
+  EXPECT_TRUE(LITERT_ABI_HAS_MEMBER(&instance, 1, count));
+  EXPECT_TRUE(LITERT_ABI_HAS_MEMBER(&instance, 1, data));
+
+  // Truncate struct before `data` array
+  instance.abi_header.struct_size = offsetof(DummyStructWithArray, data);
+  EXPECT_TRUE(LITERT_ABI_HAS_MEMBER(&instance, 1, count));
+  EXPECT_FALSE(LITERT_ABI_HAS_MEMBER(&instance, 1, data));
+}
+
+TEST(LiteRtAbiHeaderTest, SingleEvaluationOfArguments) {
+  DummyStructV1 instance;
+  instance.abi_header.struct_size = sizeof(DummyStructV1);
+  instance.abi_header.major_version = 1;
+  instance.abi_header.minor_version = 0;
+  instance.abi_header.reserved = 0;
+  instance.func1 = DummyFunc;
+  instance.func2 = DummyFunc;
+
+  int eval_count = 0;
+  auto get_instance = [&]() -> DummyStructV1* {
+    ++eval_count;
+    return &instance;
+  };
+
+  EXPECT_TRUE(LITERT_ABI_HAS_API(get_instance(), 1, func1));
+  EXPECT_EQ(eval_count, 1);
+
+  eval_count = 0;
+  EXPECT_TRUE(LITERT_ABI_HAS_MEMBER(get_instance(), 1, func1));
+  EXPECT_EQ(eval_count, 1);
+
+  eval_count = 0;
+  EXPECT_TRUE(LITERT_ABI_IS_COMPATIBLE(get_instance(), 1, 0));
+  EXPECT_EQ(eval_count, 1);
+}
+
 }  // namespace

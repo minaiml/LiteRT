@@ -4,6 +4,7 @@
 #
 
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//litert/build_common:litert_build_defs.bzl", "litert_dynamic_lib")
 
 package(
@@ -37,8 +38,10 @@ litert_dynamic_lib(
         "//litert:__subpackages__",
     ],
     deps = [
-        "//litert/c:litert_builder",
+        "//litert/c:litert_builder_header",
         "//litert/c:litert_common",
+        "//litert/c:litert_opaque_options_header",
+        "//litert/c:litert_options_header",
         "//litert/c/internal:litert_logging",
         "//litert/c/options:litert_arm_options",
         "//litert/cc:litert_expected",
@@ -50,14 +53,26 @@ litert_dynamic_lib(
         "//litert/cc/internal:litert_opaque_options_wrapper",
         "//litert/cc/internal:litert_options_wrapper",
         "//litert/cc/options:litert_arm_options",
-        "//litert/c:litert_model",
+        "//litert/compiler/cc:litert_model",
         "//litert/vendors/arm:capabilities",
+        "//litert/vendors/c:litert_compiler_plugin_api",
         # copybara:comment_begin(oss-only)
         "@ai_ml_sdk_vgf_library//:vgf",  # TODO: Placeholder include. Review when mature.
         "@ai_ml_sdk_vgf_library//:vgf_utils",  # TODO: Placeholder include. Review when mature.
         "@arm_dep_vulkan_headers//:vulkan_headers",  # TODO: Placeholder include. Review when mature.
         "@tosa_for_spirv_codegen",  # TODO: Placeholder include. Review when mature.
         # copybara:comment_end
+    ],
+)
+
+sh_test(
+    name = "arm_compiler_plugin_so_symbol_test",
+    srcs = ["//litert/test:litert_compiler_plugin_symbol_test.sh"],
+    args = [
+        "$(location :compiler_plugin_so)",
+    ],
+    data = [
+        ":compiler_plugin_so",
     ],
 )
 
@@ -85,6 +100,6 @@ cc_test(
         "//litert/test:matchers",
         "//litert/vendors/c:litert_compiler_plugin",
         "//litert/vendors/cc:litert_compiler_plugin",
-        "@com_google_googletest//:gtest_main",
+        "@com_google_googletest//:gtest_main_no_heapcheck",
     ],
 )

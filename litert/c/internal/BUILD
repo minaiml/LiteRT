@@ -65,6 +65,7 @@ cc_library(
     visibility = [
         "//visibility:public",
     ],
+    deps = ["//litert/c:litert_common"],
 )
 
 cc_test(

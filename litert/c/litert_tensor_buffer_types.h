@@ -15,6 +15,8 @@
 #ifndef ODML_LITERT_LITERT_C_LITERT_TENSOR_BUFFER_TYPES_H_
 #define ODML_LITERT_LITERT_C_LITERT_TENSOR_BUFFER_TYPES_H_
 
+#include "litert/c/litert_common.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif  // __cplusplus
@@ -101,11 +103,17 @@ typedef enum {
   kLiteRtTensorBufferTypeUserCustomBuffer = 100,
   kLiteRtTensorBufferTypeOpenVINOTensorBuffer = 100,
   kLiteRtTensorBufferTypeUserCustomBufferEnd = 199,
+  // LINT.ThenChange(
+  //   ../kotlin/src/main/kotlin/com/google/ai/edge/litert/TensorBuffer.kt:tensor_buffer_types,
+  //   ../objc/apis/LRTTensorBuffer.h:tensor_buffer_types
+  // )
+  // Force standard C compilers to use a 32-bit integer as the underlying type
+  // even when compiled with -fshort-enums.
+  _kLiteRtTensorBufferTypeForceInt32 = 0x7fffffff,
 } LiteRtTensorBufferType;
-// LINT.ThenChange(
-//   ../kotlin/src/main/kotlin/com/google/ai/edge/litert/TensorBuffer.kt:tensor_buffer_types,
-//   ../objc/apis/LRTTensorBuffer.h:tensor_buffer_types
-// )
+
+LITERT_ABI_STATIC_ASSERT(sizeof(LiteRtTensorBufferType) == 4,
+                         "LiteRtTensorBufferType size must be 4 bytes");
 
 inline bool IsUserCustomBuffer(LiteRtTensorBufferType buffer_type) {
   return buffer_type >= kLiteRtTensorBufferTypeUserCustomBuffer &&

@@ -99,8 +99,17 @@ cc_library(
         "//litert/core:dynamic_loading",
         "//litert/core:version",
         "//litert/core/util:perfetto_profiling",
+        "@com_google_absl//absl/strings:string_view",
+        "@com_google_absl//absl/synchronization",
     ],
     alwayslink = 1,
+)
+
+cc_library(
+    name = "dispatch_test_helper",
+    testonly = True,
+    hdrs = ["litert_dispatch_test_helper.h"],
+    deps = [":dispatch"],
 )
 
 cc_library(

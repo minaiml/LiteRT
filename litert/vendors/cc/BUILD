@@ -24,8 +24,10 @@ cc_library(
     hdrs = ["litert_compiler_plugin.h"],
     deps = [
         "//litert/c:litert_common",
-        "//litert/cc:litert_macros",
+        "//litert/cc:litert_expected",
+        "//litert/core:version",
         "//litert/vendors/c:litert_compiler_plugin",
+        "//litert/vendors/c:litert_compiler_plugin_api",
     ],
 )
 

@@ -154,6 +154,7 @@ litert_dispatch_api(
     export_litert_only = True,
     linkopts = [
         "-Wl,-soname=libLiteRtDispatch_Nvidia.so",
+        "-Wl,--no-warn-backrefs",
         "-Wl,-rpath,$$ORIGIN",
         "-Wl,-rpath,/usr/lib/x86_64-linux-gnu",
     ],

@@ -40,11 +40,13 @@
 #include "litert/core/filesystem.h"
 #include "litert/core/model/model.h"
 #include "litert/core/util/flatbuffer_tools.h"
+#include "litert/core/version.h"
 #include "litert/test/common.h"
 #include "litert/test/load_test_model.h"
 #include "litert/test/matchers.h"
 #include "litert/tools/dump.h"
 #include "litert/vendors/c/litert_compiler_plugin.h"
+#include "litert/vendors/c/litert_compiler_plugin_api.h"
 #include "tflite/converter/schema/schema_generated.h"
 
 namespace litert::internal {
@@ -1072,6 +1074,10 @@ class CompilerPluginFriend : public ::testing::Test {
   void AddTransformation(CompilerPlugin& plugin, LiteRtTransformation t) {
     plugin.transformations_.push_back(t);
   }
+  static Expected<CompilerPlugin> LoadPlugin(absl::string_view lib_path) {
+    return CompilerPlugin::LoadPlugin(lib_path, /*env=*/nullptr,
+                                      /*options=*/nullptr);
+  }
 };
 
 TEST_F(CompilerPluginFriend, GreedyPatternMatchAndRewrite) {
@@ -1306,4 +1312,16 @@ TEST_F(CompilerPluginFriend, MultipleIndependentMatches) {
   EXPECT_EQ(subgraph.Ops()[1]->OpCode(), kLiteRtOpCodeTflMul);
 }
 
+TEST(CompilerPluginTest, LoadPlugin_NewerVersionNegotiation) {
+  // Loads example_plugin.so (V1.1), verifies runtime (V1.0) successfully
+  // negotiates V1.1 ABI under Option B forward compatibility.
+  LITERT_ASSERT_OK_AND_ASSIGN(
+      auto plugin,
+      CompilerPlugin::FindPlugin(kTestManufacturer,
+                                 {GetLiteRtPath(kTestPluginSearchPath)}));
+  EXPECT_EQ(plugin.NegotiatedVersion().major, 1);
+  EXPECT_EQ(plugin.NegotiatedVersion().minor, 1);
+}
+
 }  // namespace litert::internal
+

@@ -2766,7 +2766,13 @@ LiteRtStatus InvocationContextSetOptions(
   return kLiteRtStatusOk;
 }
 
-LiteRtDispatchInterface NvidiaInterface = {
+const LiteRtDispatchInterface_V1 NvidiaInterface = {
+    /*.abi_header=*/{
+        .struct_size = sizeof(LiteRtDispatchInterface_V1),
+        .major_version = 1,
+        .minor_version = 0,
+        .reserved = 0,
+    },
     /*.initialize=*/Initialize,
     /*.get_vendor_id=*/GetVendorId,
     /*.get_build_id=*/GetBuildId,
@@ -2795,42 +2801,24 @@ LiteRtDispatchInterface NvidiaInterface = {
     /*.invocation_context_set_options=*/InvocationContextSetOptions,
 };
 
-LiteRtCustomTensorBufferHandlersDef NvidiaTensorBufferHandlers = {
-    /*.abi_header=*/
-    {
-        /*.struct_size=*/sizeof(LiteRtCustomTensorBufferHandlersDef),
-        /*.major_version=*/1,
-        /*.minor_version=*/0,
-        /*.reserved=*/0,
-    },
-    /*.create_func=*/CreateCudaTensorBuffer,
-    /*.destroy_func=*/DestroyCudaTensorBuffer,
-    /*.lock_func=*/LockCudaTensorBuffer,
-    /*.unlock_func=*/UnlockCudaTensorBuffer,
-    /*.clear_func=*/ClearCudaTensorBuffer,
-    /*.import_func=*/ImportCudaTensorBuffer,
-    /*.device_tag=*/kLiteRtEnvOptionTagNull,
-    /*.queue_tag=*/kLiteRtEnvOptionTagNull,
-    /*.num_supported_buffer_types=*/1,
-    /*.supported_buffer_types=*/{kNvidiaCudaTensorBufferType},
-};
-
-LiteRtDispatchApi NvidiaApi = {
-    /*.abi_header=*/
-    {
-        /*.struct_size=*/sizeof(LiteRtDispatchApi),
-        /*.major_version=*/1,
-        /*.minor_version=*/0,
-        /*.reserved=*/0,
-    },
-    /*.version=*/
-    {/*.major=*/LITERT_API_VERSION_MAJOR,
-     /*.minor=*/LITERT_API_VERSION_MINOR,
-     /*.patch=*/LITERT_API_VERSION_PATCH},
-    /*.interface=*/&NvidiaInterface,
-    /*.async_interface=*/nullptr,
-    /*.graph_interface=*/nullptr,
-    /*.tensor_buffer_handlers_def=*/&NvidiaTensorBufferHandlers,
+const LiteRtCustomTensorBufferHandlersDef_V1 NvidiaTensorBufferHandlers = {
+    .abi_header =
+        {
+            .struct_size = sizeof(LiteRtCustomTensorBufferHandlersDef_V1),
+            .major_version = 1,
+            .minor_version = 0,
+            .reserved = 0,
+        },
+    .create_func = CreateCudaTensorBuffer,
+    .destroy_func = DestroyCudaTensorBuffer,
+    .lock_func = LockCudaTensorBuffer,
+    .unlock_func = UnlockCudaTensorBuffer,
+    .clear_func = ClearCudaTensorBuffer,
+    .import_func = ImportCudaTensorBuffer,
+    .device_tag = kLiteRtEnvOptionTagNull,
+    .queue_tag = kLiteRtEnvOptionTagNull,
+    .num_supported_buffer_types = 1,
+    .supported_buffer_types = {kNvidiaCudaTensorBufferType},
 };
 
 }  // namespace
@@ -2877,10 +2865,21 @@ extern "C" LiteRtStatus LiteRtDispatchNvidiaGreedySamplerSampleBatched(
                             /*legacy_f32_only=*/false);
 }
 
-LiteRtStatus LiteRtDispatchGetApi(LiteRtDispatchApi* api) {
-  if (api == nullptr) {
+extern "C" LITERT_CAPI_EXPORT LiteRtStatus LITERT_API_CALL
+LiteRtDispatchQueryInterface(LiteRtDispatchInterfaceId interface_id,
+                             LiteRtApiVersion litert_runtime_version,
+                             LiteRtInterface* out_interface) {
+  if (out_interface == nullptr) {
     return kLiteRtStatusErrorInvalidArgument;
   }
-  *api = NvidiaApi;
-  return kLiteRtStatusOk;
+  if (litert_runtime_version.major >= 1) {
+    if (interface_id == kLiteRtInterfaceBasic) {
+      *out_interface = &NvidiaInterface;
+      return kLiteRtStatusOk;
+    } else if (interface_id == kLiteRtInterfaceCustomTensorBufferHandlers) {
+      *out_interface = &NvidiaTensorBufferHandlers;
+      return kLiteRtStatusOk;
+    }
+  }
+  return kLiteRtStatusErrorUnsupported;
 }
