@@ -1,0 +1,13 @@
+{
+  "fork": "minaiml/LiteRT",
+  "source": "google-ai-edge/LiteRT",
+  "source_url": "https://github.com/google-ai-edge/LiteRT",
+  "commit": "ccff78483e972a975b5300242084a6e2147c9776",
+  "branch": "main",
+  "fetched": "2026-09-19",
+  "upstream_license": "Apache-2.0",
+  "role": "phone runtime — successor to TensorFlow Lite; the on-device framework LiteRT-LM runs on",
+  "note": "Forked at the commit below with its licence intact. Upstream is the source of truth; this fork is a pinned reference for the minaiml delivery catalogue.",
+  "estate_license": "not applicable — no estate code added to this fork",
+  "policy": "https://github.com/minaiml"
+}
